@@ -1,0 +1,5 @@
+{
+  "name": "SmartPark Masvingo",
+  "description": "A professional, futuristic Material-You (M3)-style smart parking app. It features a live map with the user’s current location and nearby parking bays, reservation and payment functionalities, and an admin dashboard for management and analytics.",
+  "requestFramePermissions": []
+}
