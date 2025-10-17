@@ -1,0 +1,101 @@
+@import url('theme.css');
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color var(--transition-speed);
+}
+
+a:hover {
+  color: var(--secondary-color);
+}
+
+/* App layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background-color);
+}
+
+.app-content {
+  flex-grow: 1;
+  padding-bottom: 80px; /* Space for the bottom dock */
+}
+
+/* Home Page */
+.home-page {
+  position: relative;
+  height: calc(100vh - 64px); /* Full height minus header */
+}
+
+/* Auth Page */
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 64px);
+  padding: var(--spacing-unit) * 2;
+}
+
+.auth-card {
+  background-color: var(--surface-color);
+  padding: var(--spacing-unit) * 4;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid var(--surface-color);
+  margin-bottom: var(--spacing-unit) * 3;
+}
+
+.auth-tab {
+  padding: var(--spacing-unit) * 1.5 var(--spacing-unit) * 3;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text-color-secondary);
+  transition: all var(--transition-speed);
+  border-bottom: 2px solid transparent;
+}
+
+.auth-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
