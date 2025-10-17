@@ -1,24 +1,13 @@
 import React, { useState, useEffect, FC } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useTheme, useAppContext } from '../App';
+import { useAppContext } from '../App';
 import { Card, Button, Modal, Input, Spinner } from './ui';
-import type { ParkingLot, Reservation, User, Slot } from '../types';
+import type { ParkingLot, Slot } from '../types';
 import L, { LatLngExpression } from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { greenIcon, redIcon, blueIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
+import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-// Theme Toggle Component
-export const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
-  return (
-    <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container)] transition-colors">
-      <span className="material-symbols-outlined">
-        {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-      </span>
-    </button>
-  );
-};
+import './AppComponents.css';
 
 // Header Component
 export const Header: React.FC = () => {
@@ -26,25 +15,24 @@ export const Header: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <header className="bg-[var(--md-sys-color-surface)] shadow-md sticky top-0 z-40">
-            <nav className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-                <div className="flex items-center space-x-4">
-                    <span className="material-symbols-outlined text-3xl text-[var(--md-sys-color-primary)]">local_parking</span>
-                    <h1 className="text-xl font-bold">SmartPark Masvingo</h1>
+        <header className="header">
+            <nav className="header-nav">
+                <div className="header-brand">
+                    <span className="material-symbols-outlined header-logo">local_parking</span>
+                    <h1 className="header-title">SmartPark</h1>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="header-links">
                      {user && (
                         <>
-                            <NavLink to="/" className={({isActive}) => `text-sm font-medium ${isActive ? 'text-[var(--md-sys-color-primary)]' : 'hover:text-[var(--md-sys-color-primary)]'}`}>Map</NavLink>
-                            <NavLink to="/profile" className={({isActive}) => `text-sm font-medium ${isActive ? 'text-[var(--md-sys-color-primary)]' : 'hover:text-[var(--md-sys-color-primary)]'}`}>Profile</NavLink>
-                            {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `text-sm font-medium ${isActive ? 'text-[var(--md-sys-color-primary)]' : 'hover:text-[var(--md-sys-color-primary)]'}`}>Admin</NavLink>}
+                            <NavLink to="/" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
+                            <NavLink to="/profile" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
+                            {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
                         </>
                     )}
-                    <ThemeToggle />
                     {user ? (
                         <Button onClick={logout} variant="secondary">Logout</Button>
                     ) : (
-                        <Button onClick={() => navigate('/login')}>Login / Signup</Button>
+                        <Button onClick={() => navigate('/login')}>Login</Button>
                     )}
                 </div>
             </nav>
@@ -61,7 +49,7 @@ const RecenterView: FC<{center: LatLngExpression, zoom: number}> = ({center, zoo
      return null;
 }
 
-const LocationMarker: FC = () => { /* ... unchanged ... */ }
+const LocationMarker: FC = () => { /* ... unchanged ... */ return null}
 
 // Map Component
 interface MapComponentProps {
@@ -75,7 +63,7 @@ interface MapComponentProps {
 }
 export const MapComponent: React.FC<MapComponentProps> = ({ parkingLots, slots, mapView, onSelectLot, onSelectSlot, center, zoom }) => {
     return (
-        <div className="h-full w-full relative">
+        <div className="map-container">
             <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className="h-full w-full z-0">
                 <RecenterView center={center} zoom={zoom}/>
                 <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
@@ -113,21 +101,21 @@ interface ParkingLotDetailProps {
 }
 export const ParkingLotDetail: React.FC<ParkingLotDetailProps> = ({ lot, onClose, onViewBays }) => {
     return (
-        <div className={`absolute top-20 right-0 z-10 w-full max-w-sm p-4 transition-transform duration-500 ease-in-out ${lot ? 'translate-x-0' : 'translate-x-full'}`}>
-            {lot && <Card className="shadow-2xl">
-                <button onClick={onClose} className="absolute top-4 right-4 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]">
+        <div className={`parking-lot-detail ${lot ? 'open' : ''}`}>
+            {lot && <Card className="w-full">
+                <button onClick={onClose} className="close-button">
                     <span className="material-symbols-outlined">close</span>
                 </button>
-                <h2 className="text-2xl font-bold mb-2 text-[var(--md-sys-color-primary)]">{lot.name}</h2>
-                <div className="space-y-2 text-sm text-[var(--md-sys-color-on-surface-variant)]">
-                    <p className="flex items-center"><span className="material-symbols-outlined mr-2">attach_money</span>${lot.ratePerHour.toFixed(2)} / hour</p>
-                    <p className="flex items-center"><span className="material-symbols-outlined mr-2">event_seat</span>
+                <h2 className="detail-title">{lot.name}</h2>
+                <div className="detail-info">
+                    <p><span className="material-symbols-outlined">attach_money</span>${lot.ratePerHour.toFixed(2)} / hour</p>
+                    <p><span className="material-symbols-outlined">event_seat</span>
                         <span className={lot.availableSlots > 0 ? 'text-green-500' : 'text-red-500'}>
                             {lot.availableSlots} / {lot.totalSlots} slots available
                         </span>
                     </p>
                 </div>
-                <Button onClick={() => onViewBays(lot)} className="w-full mt-6">View Bays</Button>
+                <Button onClick={() => onViewBays(lot)} className="w-full mt-4">View Bays</Button>
             </Card>}
         </div>
     );
@@ -150,7 +138,6 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
 
     useEffect(() => {
         if(isOpen) {
-            // Reset state on open
             setStep(user ? 'PLATE_INPUT' : 'LOGIN_PROMPT');
             setDuration(1);
             setPlateNumber('');
@@ -158,7 +145,6 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
     }, [isOpen, user]);
 
     useEffect(() => {
-        // If user logs in while modal is open, move to next step
         if(isOpen && user && step === 'LOGIN_PROMPT') {
             setStep('PLATE_INPUT');
         }
@@ -179,7 +165,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
         setStep('PROCESSING');
         await db.createReservation({
             userId: user.uid,
-            vehicleId: plateNumber, // Using plate number as vehicleId
+            vehicleId: plateNumber,
             lotId: lot.lotId,
             slotId: slot.slotId,
             startTime: Date.now(),
@@ -199,12 +185,8 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
             case 'LOGIN_PROMPT':
                 return (
                     <div className="text-center">
-                        <p className="mb-4">Please log in or sign up to continue with your reservation.</p>
-                        <Button onClick={() => {
-                            // In a real app, you'd navigate or show a login overlay.
-                            // Here we just simulate logging in the mock user.
-                            login('john@example.com', 'password');
-                        }}>Login with Google (Mock)</Button>
+                        <p className="mb-4">Please log in or sign up to continue.</p>
+                        <Button onClick={() => login('john@example.com', 'password')}>Login (Mock)</Button>
                     </div>
                 );
             case 'PLATE_INPUT':
@@ -217,27 +199,26 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
             case 'PAYMENT':
                 return (
                      <div className="space-y-4">
-                        <p>Reserving <strong>{slot.bayNumber}</strong> for vehicle <strong>{plateNumber}</strong>.</p>
+                        <p>Reserving <strong>{slot.bayNumber}</strong> for <strong>{plateNumber}</strong>.</p>
                         <div>
-                            <label htmlFor="duration" className="block text-sm font-medium text-[var(--md-sys-color-on-surface-variant)]">Parking Duration: <strong>{duration} hour(s)</strong></label>
-                            <input type="range" id="duration" min="1" max="8" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full h-2 bg-[var(--md-sys-color-surface-variant)] rounded-lg appearance-none cursor-pointer mt-1"/>
+                            <label htmlFor="duration" className="block text-sm font-medium">Duration: <strong>{duration} hour(s)</strong></label>
+                            <input type="range" id="duration" min="1" max="8" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full h-2 rounded-lg appearance-none cursor-pointer mt-1"/>
                         </div>
-                        <Card className="bg-[var(--md-sys-color-surface-container)]">
-                             <div className="flex justify-between font-bold text-lg"><span>Total Cost:</span> <span>${totalCost.toFixed(2)}</span></div>
+                        <Card className="summary-card">
+                             <div className="flex justify-between font-bold text-lg"><span>Total:</span> <span>${totalCost.toFixed(2)}</span></div>
                         </Card>
-                         <p className="text-xs text-center text-[var(--md-sys-color-on-surface-variant)]">Payment will be processed via ZB Pay (mocked).</p>
                         <div className="flex justify-end space-x-3 pt-4">
                             <Button onClick={() => setStep('PLATE_INPUT')} variant="tertiary">Back</Button>
-                            <Button onClick={handleConfirmPayment} className="bg-green-600 hover:bg-green-700 text-white">Pay with Ecocash</Button>
+                            <Button onClick={handleConfirmPayment}>Confirm & Pay</Button>
                         </div>
                     </div>
                 );
             case 'PROCESSING':
-                return <div className="flex flex-col items-center justify-center h-48"><Spinner /><p className="mt-4 text-lg">Processing Payment...</p></div>;
+                return <div className="flex flex-col items-center justify-center h-48"><Spinner /><p className="mt-4 text-lg">Processing...</p></div>;
             case 'SUCCESS':
-                return <div className="flex flex-col items-center justify-center h-48 text-center"><span className="material-symbols-outlined text-6xl text-green-500">check_circle</span><p className="mt-4 text-lg">Reservation Confirmed!</p><p>Your spot at {slot.bayNumber} is secure.</p></div>;
+                return <div className="flex flex-col items-center justify-center h-48 text-center"><span className="material-symbols-outlined text-6xl text-green-500">check_circle</span><p className="mt-4 text-lg">Reservation Confirmed!</p></div>;
             case 'ERROR':
-                 return <div className="flex flex-col items-center justify-center h-48 text-center"><span className="material-symbols-outlined text-6xl text-red-500">error</span><p className="mt-4 text-lg">Payment Failed</p><p>Please try again.</p></div>;
+                 return <div className="flex flex-col items-center justify-center h-48 text-center"><span className="material-symbols-outlined text-6xl text-red-500">error</span><p className="mt-4 text-lg">Payment Failed</p></div>;
         }
     };
 
@@ -249,39 +230,39 @@ export const AdminDashboard: React.FC = () => {
     const { db } = useAppContext();
     const { adminStats } = db;
 
-    const PIE_COLORS = ['#4A55E0', '#5B5D72', '#77536D', '#8A8894'];
+    const PIE_COLORS = ['#9333ea', '#f472b6', '#a3a3a3', '#f5f5f5'];
 
     return (
-        <div className="p-4 sm:p-8">
+        <div className="admin-dashboard">
             <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Card><h3 className="text-lg font-semibold">Total Revenue</h3><p className="text-3xl font-bold mt-2">${adminStats.totalRevenue.toFixed(2)}</p></Card>
-                <Card><h3 className="text-lg font-semibold">Active Users</h3><p className="text-3xl font-bold mt-2">{adminStats.activeUsers}</p></Card>
-                <Card><h3 className="text-lg font-semibold">Today's Bookings</h3><p className="text-3xl font-bold mt-2">{adminStats.todaysBookings}</p></Card>
-                <Card><h3 className="text-lg font-semibold">Overall Occupancy</h3><p className="text-3xl font-bold mt-2">{adminStats.overallOccupancy}%</p></Card>
+            <div className="stats-grid">
+                <Card><h3 className="stat-title">Total Revenue</h3><p className="stat-value">${adminStats.totalRevenue.toFixed(2)}</p></Card>
+                <Card><h3 className="stat-title">Active Users</h3><p className="stat-value">{adminStats.activeUsers}</p></Card>
+                <Card><h3 className="stat-title">Today's Bookings</h3><p className="stat-value">{adminStats.todaysBookings}</p></Card>
+                <Card><h3 className="stat-title">Occupancy</h3><p className="stat-value">{adminStats.overallOccupancy}%</p></Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="h-96 p-4">
-                    <h3 className="text-lg font-semibold mb-4">Parking Lot Occupancy</h3>
-                     <ResponsiveContainer width="100%" height="90%">
+            <div className="charts-grid">
+                <Card className="chart-card">
+                    <h3 className="chart-title">Occupancy Distribution</h3>
+                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Pie data={adminStats.occupancyDistribution} cx="50%" cy="50%" labelLine={false} outerRadius="80%" fill="#8884d8" dataKey="value" nameKey="name" label>
                                 {adminStats.occupancyDistribution.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                             </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container-high)', border: '1px solid var(--md-sys-color-outline)' }}/>
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface-color)', border: '1px solid var(--primary-color)' }}/>
                             <Legend />
                         </PieChart>
                     </ResponsiveContainer>
                 </Card>
-                <Card className="h-96 p-4">
-                    <h3 className="text-lg font-semibold mb-4">Recent Reservations</h3>
-                    <div className="overflow-y-auto h-[85%]">
+                <Card className="chart-card">
+                    <h3 className="chart-title">Recent Reservations</h3>
+                    <div className="reservations-list">
                         {db.reservations.slice(0, 10).map(res => {
                             const lot = db.parkingLots.find(l => l.lotId === res.lotId);
                             const user = db.users.find(u => u.uid === res.userId);
                             return (
-                                <div key={res.resId} className="text-sm p-2 rounded-md bg-[var(--md-sys-color-surface-container)] mb-2">
+                                <div key={res.resId} className="reservation-item">
                                     <p><strong>{lot?.name}</strong> by {user?.name || 'Unknown'}</p>
                                     <p>${res.amount.toFixed(2)} - <span className="capitalize">{res.status}</span></p>
                                 </div>

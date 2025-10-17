@@ -1,0 +1,172 @@
+/* Header */
+.header {
+  background-color: var(--surface-color);
+  box-shadow: var(--box-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--primary-color);
+}
+
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--spacing-unit) * 2;
+  height: 64px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-unit);
+}
+
+.header-logo {
+  font-size: 2rem;
+  color: var(--primary-color);
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.header-links {
+  display: none; /* Hidden on mobile, shown on desktop */
+}
+
+@media (min-width: 768px) {
+  .header-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-unit) * 2;
+  }
+}
+
+.header-link {
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  transition: color var(--transition-speed);
+}
+
+.header-link:hover,
+.header-link.active {
+  color: var(--primary-color);
+}
+
+/* Map */
+.map-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Parking Lot Detail */
+.parking-lot-detail {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  width: 100%;
+  max-width: 380px;
+  padding: var(--spacing-unit) * 2;
+  transform: translateX(100%);
+  transition: transform 0.5s ease-in-out;
+  z-index: 40;
+}
+
+.parking-lot-detail.open {
+  transform: translateX(0);
+}
+
+.close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--text-color-secondary);
+}
+
+.detail-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-unit);
+}
+
+.detail-info p {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-unit);
+  margin-bottom: var(--spacing-unit) / 2;
+}
+
+/* Admin Dashboard */
+.admin-dashboard {
+  padding: var(--spacing-unit) * 2;
+}
+
+@media (min-width: 768px) {
+  .admin-dashboard {
+    padding: var(--spacing-unit) * 4;
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-unit) * 2;
+  margin-bottom: var(--spacing-unit) * 4;
+}
+
+.stat-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-top: var(--spacing-unit);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-unit) * 4;
+}
+
+@media (min-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chart-card {
+  padding: var(--spacing-unit) * 2;
+}
+
+.chart-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-unit) * 2;
+}
+
+.reservations-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.reservation-item {
+  background-color: var(--background-color);
+  padding: var(--spacing-unit);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-unit);
+}
+
+.summary-card {
+  background-color: var(--background-color);
+  padding: var(--spacing-unit) * 2;
+  border-radius: var(--border-radius);
+}

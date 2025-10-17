@@ -1,33 +1,13 @@
-import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useMockDatabase } from './hooks/useMockDatabase';
 import type { User, ParkingLot, Reservation, Slot } from './types';
 import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard } from './components/AppComponents';
 import { Input, Button, Card } from './components/ui';
 import { LatLngExpression } from 'leaflet';
-import { v4 as uuidv4 } from 'uuid';
 
 // --- CONTEXTS ---
-type Theme = 'light' | 'dark';
-type ThemeContextType = { theme: Theme; toggleTheme: () => void };
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
-  
-  useEffect(() => {
-    document.documentElement.className = theme;
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
-  
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
-};
-export const useTheme = () => {
-    const context = useContext(ThemeContext);
-    if (!context) throw new Error("useTheme must be used within a ThemeProvider");
-    return context;
-};
+// ThemeProvider removed as requested for a single dark theme. Styles are now handled globally.
 
 type AppContextType = {
     user: User | null;
@@ -74,12 +54,10 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const HomePage: React.FC = () => {
     const { db } = useAppContext();
     
-    // Map state
     const [mapView, setMapView] = useState<'lots' | 'slots'>('lots');
     const [mapCenter, setMapCenter] = useState<LatLngExpression>([-20.0744, 30.8329]);
     const [mapZoom, setMapZoom] = useState(14);
     
-    // Selection state
     const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
     const [focusedLot, setFocusedLot] = useState<ParkingLot | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -126,7 +104,7 @@ const HomePage: React.FC = () => {
     };
 
     return (
-        <main className="relative h-[calc(100vh-4rem)]">
+        <div className="home-page">
             <MapComponent 
                 parkingLots={db.parkingLots}
                 slots={slotsForFocusedLot}
@@ -137,7 +115,7 @@ const HomePage: React.FC = () => {
                 zoom={mapZoom}
             />
             {mapView === 'slots' && (
-                <div className="absolute top-20 left-4 z-10">
+                <div className="absolute top-4 left-4 z-10 animate-fadeIn">
                     <Button onClick={handleBackToLotsView} variant="secondary">
                         <span className="material-symbols-outlined mr-2">arrow_back</span>
                         View All Parking Lots
@@ -151,7 +129,7 @@ const HomePage: React.FC = () => {
                 slot={selectedSlot}
                 lot={focusedLot}
             />
-        </main>
+        </div>
     );
 };
 
@@ -180,11 +158,11 @@ const AuthPage: React.FC = () => {
     };
     
     return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-            <Card className="w-full max-w-md">
-                <div className="flex justify-center border-b border-[var(--md-sys-color-outline)] mb-6">
-                    <button onClick={() => setIsLogin(true)} className={`px-6 py-2 text-lg font-semibold transition-colors ${isLogin ? 'border-b-2 border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Login</button>
-                    <button onClick={() => setIsLogin(false)} className={`px-6 py-2 text-lg font-semibold transition-colors ${!isLogin ? 'border-b-2 border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Sign Up</button>
+        <div className="auth-page">
+            <Card className="w-full max-w-md auth-card">
+                <div className="auth-tabs">
+                    <button onClick={() => setIsLogin(true)} className={`auth-tab ${isLogin ? 'active' : ''}`}>Login</button>
+                    <button onClick={() => setIsLogin(false)} className={`auth-tab ${!isLogin ? 'active' : ''}`}>Sign Up</button>
                 </div>
                 <h2 className="text-2xl font-bold text-center mb-6">{isLogin ? "Welcome Back" : "Create Account"}</h2>
                 <form onSubmit={handleAuthAction} className="space-y-6">
@@ -202,7 +180,7 @@ const AuthPage: React.FC = () => {
     );
 };
 
-const ProfilePage: React.FC = () => { /* ... mostly unchanged ... */ return <div>Profile Page</div>; };
+const ProfilePage: React.FC = () => { return <div className="p-4">Profile Page</div>; };
 
 // --- ROUTING ---
 interface ProtectedRouteProps { children: React.ReactNode; allowedRoles?: ('user' | 'admin')[]; }
@@ -219,28 +197,32 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <>{children}</>;
 };
 
+import Dock from './components/Dock';
+import './components/Dock.css';
+
 const AppRoutes = () => (
-    <div className="min-h-screen flex flex-col">
+    <div className="app-container">
         <Header />
-        <Routes>
-            <Route path="/login" element={<AuthPage />} />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+        <main className="app-content">
+            <Routes>
+                <Route path="/login" element={<AuthPage />} />
+                <Route path="/" element={<HomePage />} />
+                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        </main>
+        <Dock />
     </div>
 );
 
 // --- MAIN APP ---
 const App: React.FC = () => (
-    <ThemeProvider>
-        <AppProvider>
-            <HashRouter>
-                <AppRoutes />
-            </HashRouter>
-        </AppProvider>
-    </ThemeProvider>
+    <AppProvider>
+        <HashRouter>
+            <AppRoutes />
+        </HashRouter>
+    </AppProvider>
 );
 
 export default App;
