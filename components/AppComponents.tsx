@@ -1,18 +1,25 @@
 import React, { useState, useEffect, FC } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../App';
+import { useAuth } from '../hooks/useAuth';
+import { createReservation } from '../services/firestore';
 import { Card, Button, Modal, Input, Spinner } from './ui';
 import type { ParkingLot, Slot } from '../types';
 import L, { LatLngExpression } from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
+import { auth } from '../services/firebase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
 
 // Header Component
 export const Header: React.FC = () => {
-    const { user, logout } = useAppContext();
+    const { user } = useAuth();
     const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await auth.signOut();
+        navigate('/login');
+    }
 
     return (
         <header className="header">
@@ -26,11 +33,11 @@ export const Header: React.FC = () => {
                         <>
                             <NavLink to="/" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
                             <NavLink to="/profile" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
-                            {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
+                            {/* Add admin link based on user role from firestore */}
                         </>
                     )}
                     {user ? (
-                        <Button onClick={logout} variant="secondary">Logout</Button>
+                        <Button onClick={handleLogout} variant="secondary">Logout</Button>
                     ) : (
                         <Button onClick={() => navigate('/login')}>Login</Button>
                     )}
@@ -72,10 +79,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({ parkingLots, slots, 
                     <Marker
                         key={lot.lotId}
                         position={[lot.coordinates.lat, lot.coordinates.lng]}
-                        icon={lot.availableSlots > 0 ? greenIcon : redIcon}
+                        icon={(lot.totalSlots - (lot.occupiedSlots || 0)) > 0 ? greenIcon : redIcon}
                         eventHandlers={{ click: () => onSelectLot(lot) }}
                     >
-                        <Popup><b>{lot.name}</b><br/>{lot.availableSlots} / {lot.totalSlots} available.</Popup>
+                        <Popup><b>{lot.name}</b><br/>{(lot.totalSlots - (lot.occupiedSlots || 0))} / {lot.totalSlots} available.</Popup>
                     </Marker>
                 ))}
                 {mapView === 'slots' && slots.map(slot => (
@@ -85,7 +92,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ parkingLots, slots, 
                         icon={slot.status === 'free' ? greenSlotIcon : redSlotIcon}
                         eventHandlers={{ click: () => onSelectSlot(slot) }}
                     >
-                        <Popup>{slot.bayNumber} - {slot.status}</Popup>
+                        <Popup>{slot.slotNumber} - {slot.status}</Popup>
                     </Marker>
                 ))}
             </MapContainer>
@@ -108,10 +115,10 @@ export const ParkingLotDetail: React.FC<ParkingLotDetailProps> = ({ lot, onClose
                 </button>
                 <h2 className="detail-title">{lot.name}</h2>
                 <div className="detail-info">
-                    <p><span className="material-symbols-outlined">attach_money</span>${lot.ratePerHour.toFixed(2)} / hour</p>
+                    <p><span className="material-symbols-outlined">attach_money</span>${(lot.ratePerHour || 0).toFixed(2)} / hour</p>
                     <p><span className="material-symbols-outlined">event_seat</span>
-                        <span className={lot.availableSlots > 0 ? 'text-green-500' : 'text-red-500'}>
-                            {lot.availableSlots} / {lot.totalSlots} slots available
+                        <span className={(lot.totalSlots - (lot.occupiedSlots || 0)) > 0 ? 'text-green-500' : 'text-red-500'}>
+                            {(lot.totalSlots - (lot.occupiedSlots || 0))} / {lot.totalSlots} slots available
                         </span>
                     </p>
                 </div>
@@ -131,7 +138,7 @@ interface ReservationModalProps {
     lot: ParkingLot | null;
 }
 export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onClose, slot, lot }) => {
-    const { user, login, db } = useAppContext();
+    const { user } = useAuth();
     const [step, setStep] = useState<ReservationStep>('PLATE_INPUT');
     const [duration, setDuration] = useState(1);
     const [plateNumber, setPlateNumber] = useState('');
@@ -159,34 +166,37 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
         }
         setStep('PAYMENT');
     }
-    
+
     const handleConfirmPayment = async () => {
-        if(!user) return;
+        if(!user || !slot) return;
         setStep('PROCESSING');
-        await db.createReservation({
+
+        const reservationData = {
             userId: user.uid,
-            vehicleId: plateNumber,
-            lotId: lot.lotId,
             slotId: slot.slotId,
-            startTime: Date.now(),
-            endTime: Date.now() + duration * 60 * 60 * 1000,
-            durationHours: duration,
-            amount: lot.ratePerHour * duration,
-            currency: 'ZWL',
-            status: 'pending',
-        });
-        setStep('SUCCESS');
+            startTime: new Date(),
+            endTime: new Date(Date.now() + duration * 60 * 60 * 1000),
+        };
+
+        const result = await createReservation(reservationData);
+
+        if (result.success) {
+            setStep('SUCCESS');
+        } else {
+            setStep('ERROR');
+        }
     };
 
-    const totalCost = lot.ratePerHour * duration;
+    const totalCost = (lot.ratePerHour || 0) * duration;
 
+    const navigate = useNavigate();
     const renderContent = () => {
         switch (step) {
             case 'LOGIN_PROMPT':
                 return (
                     <div className="text-center">
                         <p className="mb-4">Please log in or sign up to continue.</p>
-                        <Button onClick={() => login('john@example.com', 'password')}>Login (Mock)</Button>
+                        <Button onClick={() => navigate('/login')}>Login</Button>
                     </div>
                 );
             case 'PLATE_INPUT':
@@ -199,7 +209,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
             case 'PAYMENT':
                 return (
                      <div className="space-y-4">
-                        <p>Reserving <strong>{slot.bayNumber}</strong> for <strong>{plateNumber}</strong>.</p>
+                        <p>Reserving <strong>{slot.slotNumber}</strong> for <strong>{plateNumber}</strong>.</p>
                         <div>
                             <label htmlFor="duration" className="block text-sm font-medium">Duration: <strong>{duration} hour(s)</strong></label>
                             <input type="range" id="duration" min="1" max="8" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full h-2 rounded-lg appearance-none cursor-pointer mt-1"/>
@@ -226,51 +236,5 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
 }
 
 // Admin Dashboard
-export const AdminDashboard: React.FC = () => {
-    const { db } = useAppContext();
-    const { adminStats } = db;
-
-    const PIE_COLORS = ['#9333ea', '#f472b6', '#a3a3a3', '#f5f5f5'];
-
-    return (
-        <div className="admin-dashboard">
-            <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-            <div className="stats-grid">
-                <Card><h3 className="stat-title">Total Revenue</h3><p className="stat-value">${adminStats.totalRevenue.toFixed(2)}</p></Card>
-                <Card><h3 className="stat-title">Active Users</h3><p className="stat-value">{adminStats.activeUsers}</p></Card>
-                <Card><h3 className="stat-title">Today's Bookings</h3><p className="stat-value">{adminStats.todaysBookings}</p></Card>
-                <Card><h3 className="stat-title">Occupancy</h3><p className="stat-value">{adminStats.overallOccupancy}%</p></Card>
-            </div>
-
-            <div className="charts-grid">
-                <Card className="chart-card">
-                    <h3 className="chart-title">Occupancy Distribution</h3>
-                     <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie data={adminStats.occupancyDistribution} cx="50%" cy="50%" labelLine={false} outerRadius="80%" fill="#8884d8" dataKey="value" nameKey="name" label>
-                                {adminStats.occupancyDistribution.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface-color)', border: '1px solid var(--primary-color)' }}/>
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </Card>
-                <Card className="chart-card">
-                    <h3 className="chart-title">Recent Reservations</h3>
-                    <div className="reservations-list">
-                        {db.reservations.slice(0, 10).map(res => {
-                            const lot = db.parkingLots.find(l => l.lotId === res.lotId);
-                            const user = db.users.find(u => u.uid === res.userId);
-                            return (
-                                <div key={res.resId} className="reservation-item">
-                                    <p><strong>{lot?.name}</strong> by {user?.name || 'Unknown'}</p>
-                                    <p>${res.amount.toFixed(2)} - <span className="capitalize">{res.status}</span></p>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </Card>
-            </div>
-        </div>
-    );
-};
+// Temporarily disabled until connected to Firestore
+export const AdminDashboard: React.FC<any> = () => null;
