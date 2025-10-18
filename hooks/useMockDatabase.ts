@@ -10,9 +10,6 @@ const initialParkingLots: ParkingLot[] = [
   { lotId: 'lot4', name: 'Masvingo Polytechnic', city: 'Masvingo', coordinates: { lat: -20.0900, lng: 30.8455 }, totalSlots: 30, availableSlots: 0, ratePerHour: 1.2, status: 'active', createdAt: Date.now() },
 ];
 
-const adminUser: User = { uid: 'admin01', name: 'Admin', email: 'admin@smartpark.io', role: 'admin', theme: 'dark', createdAt: Date.now(), activeVehicleId: null };
-const regularUser: User = { uid: 'user01', name: 'John Doe', email: 'john@example.com', role: 'user', theme: 'light', createdAt: Date.now(), activeVehicleId: 'v1' };
-
 const generateInitialSlots = (lots: ParkingLot[]): Slot[] => {
     let allSlots: Slot[] = [];
     lots.forEach(lot => {
@@ -39,23 +36,9 @@ export const useMockDatabase = () => {
     const [parkingLots, setParkingLots] = useState<ParkingLot[]>(initialParkingLots);
     const [slots, setSlots] = useState<Slot[]>(() => generateInitialSlots(initialParkingLots));
     const [reservations, setReservations] = useState<Reservation[]>([]);
-    const [users, setUsers] = useState<User[]>([adminUser, regularUser]);
+    const [users, setUsers] = useState<User[]>([]); // User state is now managed by Firebase
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
-
-    const createUser = (name: string, email: string): User => {
-        const newUser: User = {
-            uid: uuidv4(),
-            name,
-            email,
-            role: 'user',
-            theme: 'light',
-            createdAt: Date.now(),
-            activeVehicleId: null
-        };
-        setUsers(prev => [...prev, newUser]);
-        return newUser;
-    };
 
     const createReservation = useCallback((res: Omit<Reservation, 'resId' | 'createdAt' | 'paymentId'>) => {
         return new Promise<Reservation>((resolve) => {
@@ -151,7 +134,6 @@ export const useMockDatabase = () => {
         vehicles,
         payments,
         slots,
-        createUser,
         createReservation,
         getSlotsForLot,
         getReservationsForUser: (userId: string) => reservations.filter(r => r.userId === userId).sort((a, b) => b.createdAt - a.createdAt),

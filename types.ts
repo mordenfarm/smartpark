@@ -8,12 +8,12 @@ export interface Slot {
 
 export interface User {
   uid: string;
-  name: string;
-  email: string;
+  displayName: string | null;
+  email: string | null;
   role: 'user' | 'admin';
-  theme: 'light' | 'dark';
-  createdAt: number; // timestamp
-  activeVehicleId: string | null;
+  createdAt?: number; // timestamp
+  activeVehicleId?: string | null;
+  theme?: 'light' | 'dark';
 }
 
 export interface Vehicle {
@@ -29,7 +29,7 @@ export interface Vehicle {
 
 export interface ParkingLot {
   lotId: string;
-  name: string;
+  name:string;
   city: string;
   coordinates: { lat: number; lng: number };
   totalSlots: number;
