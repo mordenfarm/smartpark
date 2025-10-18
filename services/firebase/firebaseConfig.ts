@@ -6,13 +6,13 @@ import { getFirestore } from "firebase/firestore";
 // NOTE: Replace with your actual Firebase project configuration.
 // This is a placeholder configuration.
 const firebaseConfig = {
-  apiKey: "AIzaSyC-placeholder-for-your-api-key",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "1:your-sender-id:web:your-app-id",
-  measurementId: "G-your-measurement-id"
+  apiKey: "AIzaSyBGAiw7InabqWQTzxE00wj3DD8ov3Fla_Q",
+  authDomain: "smatpark-9c5dc.firebaseapp.com",
+  databaseURL: "https://smatpark-9c5dc-default-rtdb.firebaseio.com",
+  projectId: "smatpark-9c5dc",
+  storageBucket: "smatpark-9c5dc.firebasestorage.app",
+  messagingSenderId: "63579930759",
+  appId: "1:63579930759:web:e2db504ff5169cd00bb822"
 };
 
 // Initialize Firebase
