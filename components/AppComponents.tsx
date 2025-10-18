@@ -9,6 +9,30 @@ import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapI
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
 
+// Helper for Avatar
+const Avatar: React.FC<{ user: { displayName: string | null, email: string | null, photoURL?: string | null } }> = ({ user }) => {
+    const getInitials = () => {
+        if (user.displayName) {
+            return user.displayName.charAt(0).toUpperCase();
+        }
+        if (user.email) {
+            return user.email.charAt(0).toUpperCase();
+        }
+        return '?';
+    };
+
+    return (
+        <div className="avatar">
+            {user.photoURL ? (
+                <img src={user.photoURL} alt="Profile" className="avatar-image" />
+            ) : (
+                <span className="avatar-initials">{getInitials()}</span>
+            )}
+        </div>
+    );
+};
+
+
 // Header Component
 export const Header: React.FC = () => {
     const { user, logout } = useAppContext();
@@ -29,11 +53,16 @@ export const Header: React.FC = () => {
                             {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
                         </>
                     )}
-                    {user ? (
-                        <Button onClick={logout} variant="secondary">Logout</Button>
-                    ) : (
-                        <Button onClick={() => navigate('/login')}>Login</Button>
-                    )}
+                    <div className="flex items-center space-x-4">
+                        {user ? (
+                            <>
+                                <Avatar user={user} />
+                                <Button onClick={logout} variant="secondary">Logout</Button>
+                            </>
+                        ) : (
+                            <Button onClick={() => navigate('/login')}>Login</Button>
+                        )}
+                    </div>
                 </div>
             </nav>
         </header>

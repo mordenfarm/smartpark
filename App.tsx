@@ -5,14 +5,14 @@ import type { User, ParkingLot, Reservation, Slot } from './types';
 import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard } from './components/AppComponents';
 import { Input, Button, Card } from './components/ui';
 import { LatLngExpression } from 'leaflet';
+import { onAuthChanged, getUserProfile, signInWithEmail, signUpWithEmail, doSignOut, signInWithGoogle } from './services/auth';
+import { User as FirebaseUser } from 'firebase/auth';
 
 // --- CONTEXTS ---
-// ThemeProvider removed as requested for a single dark theme. Styles are now handled globally.
-
 type AppContextType = {
     user: User | null;
-    login: (email: string, pass: string) => User | null;
-    signup: (name: string, email: string) => User | null;
+    firebaseUser: FirebaseUser | null;
+    loading: boolean;
     logout: () => void;
     db: ReturnType<typeof useMockDatabase>;
 };
@@ -22,29 +22,38 @@ export const useAppContext = () => {
     if (!context) throw new Error("useAppContext must be used within an AppProvider");
     return context;
 };
+
 const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const db = useMockDatabase();
     const [user, setUser] = useState<User | null>(null);
+    const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const login = (email: string, pass: string): User | null => {
-        const foundUser = db.users.find(u => u.email === email);
-        if (foundUser) { setUser(foundUser); return foundUser; }
-        return null;
+    useEffect(() => {
+        const unsubscribe = onAuthChanged(async (user) => {
+            setFirebaseUser(user);
+            if (user) {
+                const userProfile = await getUserProfile(user.uid);
+                setUser(userProfile);
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const logout = async () => {
+        await doSignOut();
+        setUser(null);
+        setFirebaseUser(null);
     };
     
-    const signup = (name: string, email: string): User | null => {
-        if(db.users.find(u => u.email === email)) {
-            alert("An account with this email already exists.");
-            return null;
-        }
-        const newUser = db.createUser(name, email);
-        setUser(newUser);
-        return newUser;
-    }
+    const value = { user, firebaseUser, loading, logout, db };
 
-    const logout = () => setUser(null);
-    
-    const value = { user, login, signup, logout, db };
+    if (loading) {
+        return <div>Loading...</div>; // Or a proper spinner component
+    }
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
@@ -81,8 +90,19 @@ const HomePage: React.FC = () => {
         setMapCenter([lot.coordinates.lat, lot.coordinates.lng]);
     };
 
+    const { user } = useAppContext();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const handleSelectSlot = (slot: Slot) => {
-        if(slot.status === 'free'){
+        if (!user) {
+            // If user is not logged in, redirect to login page
+            // and pass the current location to be redirected back after login
+            navigate('/login', { state: { from: location } });
+            return;
+        }
+
+        if (slot.status === 'free') {
             setSelectedSlot(slot);
             setReserveModalOpen(true);
         } else {
@@ -138,7 +158,8 @@ const AuthPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
-    const { login, signup, user } = useAppContext();
+    const [error, setError] = useState<string | null>(null);
+    const { user } = useAppContext();
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname || "/";
@@ -147,13 +168,33 @@ const AuthPage: React.FC = () => {
       if(user) navigate(from, { replace: true });
     }, [user, navigate, from]);
 
-    const handleAuthAction = (e: React.FormEvent) => {
+    const handleAuthAction = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isLogin) {
-            const loggedInUser = login(email, password);
-            if (!loggedInUser) alert("Login failed. Check credentials.");
-        } else {
-            signup(name, email);
+        setError(null);
+        console.log("Attempting to sign in with:", email);
+        try {
+            if (isLogin) {
+                await signInWithEmail(email, password);
+            } else {
+                await signUpWithEmail(email, password, name);
+            }
+            console.log("Sign in successful, navigating...");
+            navigate(from, { replace: true });
+        } catch (err: any) {
+            console.error("Authentication error:", err);
+            setError(err.message);
+            alert(`Authentication Failed: ${err.message}`);
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        setError(null);
+        try {
+            await signInWithGoogle();
+            navigate(from, { replace: true });
+        } catch (err: any) {
+            setError(err.message);
+            alert(`Google Sign-In Failed: ${err.message}`);
         }
     };
     
@@ -169,10 +210,11 @@ const AuthPage: React.FC = () => {
                     {!isLogin && <Input id="name" label="Full Name" type="text" value={name} onChange={e => setName(e.target.value)} required />}
                     <Input id="email" label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
                     <Input id="password" label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
                     <Button type="submit" className="w-full">{isLogin ? 'Login' : 'Sign Up'}</Button>
-                    <Button type="button" variant="secondary" className="w-full" onClick={() => login('john@example.com', 'pw')}>
+                    <Button type="button" variant="secondary" className="w-full" onClick={handleGoogleSignIn}>
                       <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.82l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-                      Sign In with Google (Mock)
+                      Sign In with Google
                     </Button>
                 </form>
             </Card>
