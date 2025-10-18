@@ -90,8 +90,19 @@ const HomePage: React.FC = () => {
         setMapCenter([lot.coordinates.lat, lot.coordinates.lng]);
     };
 
+    const { user } = useAppContext();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const handleSelectSlot = (slot: Slot) => {
-        if(slot.status === 'free'){
+        if (!user) {
+            // If user is not logged in, redirect to login page
+            // and pass the current location to be redirected back after login
+            navigate('/login', { state: { from: location } });
+            return;
+        }
+
+        if (slot.status === 'free') {
             setSelectedSlot(slot);
             setReserveModalOpen(true);
         } else {

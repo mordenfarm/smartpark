@@ -14,58 +14,76 @@ import { User } from '../types';
 const googleProvider = new GoogleAuthProvider();
 
 /**
- * Creates the admin user if it does not already exist.
- * This is a simplified check for a client-side app.
+ * Creates the admin user if it has not been created before.
+ * It uses a flag in Firestore to ensure it only runs once.
  */
 const initializeAdminUser = async () => {
-  const adminEmail = 'admin@example.com';
-  const adminPassword = '123';
+  const flagRef = doc(db, 'meta', 'admin-created-flag');
+  const flagDoc = await getDoc(flagRef);
 
-  try {
-    // Try to sign in silently. If it works, the user exists.
-    // Note: This is a workaround. A better solution involves a server-side check or custom claims.
-    await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-    await signOut(auth); // Sign out immediately after check
-  } catch (error: any) {
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-      // User does not exist, so create them
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
-        const user = userCredential.user;
+  if (!flagDoc.exists()) {
+    console.log("Admin creation flag not found. Attempting to create admin user...");
+    const adminEmail = 'admin@example.com';
+    const adminPassword = '123';
 
-        // Store additional user data in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: 'admin', // Corrected from 'Admin'
-          role: 'admin',
-          createdAt: serverTimestamp(),
-        });
-        console.log('Admin user created successfully.');
-        await signOut(auth); // Sign out after creation
-      } catch (creationError) {
-        console.error('Error creating admin user:', creationError);
-      }
-    } else {
-      // Another error occurred during the sign-in check
-      console.error('Error checking for admin user:', error);
+    try {
+      // Create the user in Firebase Auth. This also signs the new user in.
+      const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+      const user = userCredential.user;
+
+      // Store additional user data in Firestore.
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: 'admin',
+        role: 'admin',
+        createdAt: serverTimestamp(),
+        photoURL: null,
+      });
+
+      // Set the flag to prevent this from running again.
+      await setDoc(flagRef, { initialized: true, timestamp: serverTimestamp() });
+
+      console.log('Admin user created successfully and flag set.');
+
+      // Sign out the newly created admin user so the app starts in a clean state for the actual user.
+      await signOut(auth);
+
+    } catch (error: any) {
+       if (error.code === 'auth/email-already-in-use') {
+         // This can happen if admin was created in Auth but the flag failed to set.
+         // We assume the setup is complete and just set the flag to prevent future runs.
+         await setDoc(flagRef, { initialized: true, timestamp: serverTimestamp(), recovered: true });
+         console.log("Admin user already exists in Auth. Setting flag to recover state.");
+       } else {
+        // For any other error (e.g., network, security rules), we log it.
+        console.error('An unexpected error occurred during admin user creation:', error);
+       }
     }
   }
 };
 
-// Call this function when the app initializes
-initializeAdminUser();
+// Call this function when the app initializes.
+// We wrap it in a self-executing function to catch any top-level errors.
+(async () => {
+  try {
+    await initializeAdminUser();
+  } catch (error) {
+    console.error("Failed to initialize admin user:", error);
+  }
+})();
+
 
 export const signUpWithEmail = async (email: string, password: string, displayName: string): Promise<FirebaseUser> => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
 
-  // Store additional user data in Firestore
   await setDoc(doc(db, 'users', user.uid), {
     uid: user.uid,
     email: user.email,
     displayName: displayName,
-    role: 'user', // Default role
+    photoURL: null,
+    role: 'user',
     createdAt: serverTimestamp(),
   });
 
@@ -81,7 +99,6 @@ export const signInWithGoogle = async (): Promise<FirebaseUser> => {
   const result = await signInWithPopup(auth, googleProvider);
   const user = result.user;
 
-  // Store additional user data in Firestore if the user is new
   const userDocRef = doc(db, 'users', user.uid);
   const userDoc = await getDoc(userDocRef);
   if (!userDoc.exists()) {
@@ -89,6 +106,7 @@ export const signInWithGoogle = async (): Promise<FirebaseUser> => {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
+      photoURL: user.photoURL,
       role: 'user',
       createdAt: serverTimestamp(),
     });
@@ -110,8 +128,8 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
   const userDoc = await getDoc(userDocRef);
 
   if (userDoc.exists()) {
-    // Convert Firestore timestamp to number if it exists
     const data = userDoc.data();
+    // Convert Firestore timestamp to a number for client-side use
     if (data.createdAt && typeof data.createdAt.toDate === 'function') {
       data.createdAt = data.createdAt.toDate().getTime();
     }

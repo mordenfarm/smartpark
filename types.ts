@@ -11,6 +11,7 @@ export interface User {
   displayName: string | null;
   email: string | null;
   role: 'user' | 'admin';
+  photoURL?: string | null;
   createdAt?: number; // timestamp
   activeVehicleId?: string | null;
   theme?: 'light' | 'dark';
