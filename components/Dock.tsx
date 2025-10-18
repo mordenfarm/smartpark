@@ -1,8 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAppContext } from '../App';
 import './Dock.css';
 
 const Dock: React.FC = () => {
+    const { db } = useAppContext();
+    const unreadNotifications = db.notifications.filter(n => !n.read).length;
+
     return (
         <nav className="dock-container">
             <NavLink to="/" className="dock-item" end>
@@ -13,9 +17,16 @@ const Dock: React.FC = () => {
                 <span className="material-symbols-outlined">person</span>
                 <span className="dock-label">Profile</span>
             </NavLink>
-            <NavLink to="/admin" className="dock-item">
-                <span className="material-symbols-outlined">admin_panel_settings</span>
-                <span className="dock-label">Admin</span>
+            <NavLink to="/notifications" className="dock-item">
+                <span className="material-symbols-outlined">notifications</span>
+                <span className="dock-label">Notifications</span>
+                {unreadNotifications > 0 && (
+                    <span className="notification-badge">{unreadNotifications}</span>
+                )}
+            </NavLink>
+            <NavLink to="/settings" className="dock-item">
+                <span className="material-symbols-outlined">settings</span>
+                <span className="dock-label">Settings</span>
             </NavLink>
         </nav>
     );

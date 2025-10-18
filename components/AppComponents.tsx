@@ -37,6 +37,13 @@ const Avatar: React.FC<{ user: { displayName: string | null, email: string | nul
 export const Header: React.FC = () => {
     const { user, logout } = useAppContext();
     const navigate = useNavigate();
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        setDropdownOpen(false);
+        navigate('/login');
+    };
 
     return (
         <header className="header">
@@ -46,19 +53,28 @@ export const Header: React.FC = () => {
                     <h1 className="header-title">SmartPark</h1>
                 </div>
                 <div className="header-links">
-                     {user && (
+                    {user && (
                         <>
-                            <NavLink to="/" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
-                            <NavLink to="/profile" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
-                            {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
+                            <NavLink to="/" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
+                            <NavLink to="/profile" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
+                            {user.role === 'admin' && <NavLink to="/admin" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
                         </>
                     )}
                     <div className="flex items-center space-x-4">
                         {user ? (
-                            <>
-                                <Avatar user={user} />
-                                <Button onClick={logout} variant="secondary">Logout</Button>
-                            </>
+                            <div className="relative">
+                                <button onClick={() => setDropdownOpen(!dropdownOpen)} className="focus:outline-none">
+                                    <Avatar user={user} />
+                                </button>
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-20">
+                                        <div className="py-1">
+                                            <NavLink to="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setDropdownOpen(false)}>Settings</NavLink>
+                                            <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <Button onClick={() => navigate('/login')}>Login</Button>
                         )}
