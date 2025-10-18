@@ -3,38 +3,52 @@ import { db } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { ParkingLot, Slot } from '../types';
 import { MapComponent, ParkingLotDetail, ReservationModal } from '../components/AppComponents';
-import { Button } from '../components/ui';
+import { Button, Spinner } from '../components/ui';
 import { LatLngExpression } from 'leaflet';
 
 const MapView: React.FC = () => {
     const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
     const [slots, setSlots] = useState<Slot[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchParkingLots = async () => {
-            const querySnapshot = await getDocs(collection(db, "parkingLots"));
-            const lots = querySnapshot.docs.map(doc => ({ lotId: doc.id, ...doc.data() })) as ParkingLot[];
+        const fetchData = async () => {
+            setLoading(true);
+            const parkingLotsQuery = getDocs(collection(db, "parkingLots"));
+            const slotsQuery = getDocs(collection(db, "slots"));
+
+            const [parkingLotsSnapshot, slotsSnapshot] = await Promise.all([parkingLotsQuery, slotsQuery]);
+
+            const lots = parkingLotsSnapshot.docs.map(doc => ({ lotId: doc.id, ...doc.data() })) as ParkingLot[];
             setParkingLots(lots);
-        };
 
-        const fetchSlots = async () => {
-            const querySnapshot = await getDocs(collection(db, "slots"));
-            const slotsData = querySnapshot.docs.map(doc => ({ slotId: doc.id, ...doc.data() })) as Slot[];
+            const slotsData = slotsSnapshot.docs.map(doc => ({ slotId: doc.id, ...doc.data() })) as Slot[];
             setSlots(slotsData);
+            setLoading(false);
         };
 
-        fetchParkingLots();
-        fetchSlots();
+        fetchData();
     }, []);
+
+    if (loading) {
+        return <div className="loading-container"><Spinner /></div>;
+    }
 
     const [mapView, setMapView] = useState<'lots' | 'slots'>('lots');
     const [mapCenter, setMapCenter] = useState<LatLngExpression>([-20.0744, 30.8329]);
     const [mapZoom, setMapZoom] = useState(14);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
     const [focusedLot, setFocusedLot] = useState<ParkingLot | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
     const [isReserveModalOpen, setReserveModalOpen] = useState(false);
+
+    const filteredParkingLots = useMemo(() => {
+        return parkingLots.filter(lot =>
+            lot.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [parkingLots, searchQuery]);
 
     const slotsForFocusedLot = useMemo(() => {
         return focusedLot ? slots.filter(slot => slot.lotId === focusedLot.lotId) : [];
@@ -78,8 +92,16 @@ const MapView: React.FC = () => {
 
     return (
         <div className="home-page">
+            <div className="search-bar-container">
+                <Input
+                    type="text"
+                    placeholder="Search for a parking lot..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
             <MapComponent
-                parkingLots={parkingLots}
+                parkingLots={filteredParkingLots}
                 slots={slotsForFocusedLot}
                 mapView={mapView}
                 onSelectLot={handleSelectLot}

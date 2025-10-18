@@ -41,6 +41,7 @@ const LoginPage: React.FC = () => {
             <input
               type="email"
               id="email"
+              data-testid="email-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

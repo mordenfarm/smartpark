@@ -29,7 +29,7 @@ export const Card: React.FC<CardProps> = ({ children, className, ...props }) => 
 
 // Input
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
 }
 export const Input: React.FC<InputProps> = ({ label, id, className, ...props }) => {
   return (
@@ -37,12 +37,12 @@ export const Input: React.FC<InputProps> = ({ label, id, className, ...props }) 
       <input
         id={id}
         className={`input-field ${className}`}
-        placeholder=" "
+        placeholder={props.placeholder || " "}
         {...props}
       />
-      <label htmlFor={id} className="input-label">
+      {label && <label htmlFor={id} className="input-label">
         {label}
-      </label>
+      </label>}
     </div>
   );
 };

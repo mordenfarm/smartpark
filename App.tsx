@@ -3,10 +3,10 @@ import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/auth/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import HomePage from './pages/HomePage'; // Assuming you'll create this
-import ProfilePage from './pages/ProfilePage'; // Assuming you'll create this
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
 import Dock from './components/Dock';
-import Header from './components/Header'; // Assuming you have a Header component
+import { Header } from './components/AppComponents';
 import './components/Dock.css';
 
 
