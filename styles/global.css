@@ -99,3 +99,37 @@ a:hover {
     transform: translateY(0);
   }
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-content {
+    padding-bottom: 70px; /* Adjust for dock height */
+  }
+
+  .header-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--spacing-unit) * 1.5;
+  }
+
+  .header-brand {
+    margin-bottom: var(--spacing-unit);
+  }
+
+  .header-links {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .profile-page, .settings-page, .notifications-page {
+    padding: var(--spacing-unit) * 2;
+  }
+
+  .parking-lot-detail {
+    width: 100%;
+    max-width: 100%;
+    bottom: 0;
+    left: 0;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+  }
+}

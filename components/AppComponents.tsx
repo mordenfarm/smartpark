@@ -4,7 +4,7 @@ import { useAppContext } from '../App';
 import { Card, Button, Modal, Input, Spinner } from './ui';
 import type { ParkingLot, Slot } from '../types';
 import L, { LatLngExpression } from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl, LayerGroup } from 'react-leaflet';
 import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
@@ -37,6 +37,22 @@ const Avatar: React.FC<{ user: { displayName: string | null, email: string | nul
 export const Header: React.FC = () => {
     const { user, logout } = useAppContext();
     const navigate = useNavigate();
+    const [isDropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [dropdownRef]);
+
 
     return (
         <header className="header">
@@ -55,10 +71,37 @@ export const Header: React.FC = () => {
                     )}
                     <div className="flex items-center space-x-4">
                         {user ? (
-                            <>
-                                <Avatar user={user} />
-                                <Button onClick={logout} variant="secondary">Logout</Button>
-                            </>
+                            <div className="relative" ref={dropdownRef}>
+                                <button onClick={() => setDropdownOpen(!isDropdownOpen)} className="focus:outline-none rounded-full">
+                                    <Avatar user={user} />
+                                </button>
+                                {isDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 bg-card-bg rounded-md shadow-lg py-1 z-50 border border-border-color animate-fadeIn">
+                                        <div className="px-4 py-2 border-b border-border-color">
+                                            <p className="text-sm font-medium truncate">{user.displayName || 'User'}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                        </div>
+                                        <NavLink
+                                            to="/settings"
+                                            className="flex items-center px-4 py-2 text-sm hover:bg-surface-hover"
+                                            onClick={() => setDropdownOpen(false)}
+                                        >
+                                            <span className="material-symbols-outlined mr-2">settings</span>
+                                            Settings
+                                        </NavLink>
+                                        <button
+                                            onClick={() => {
+                                                logout();
+                                                setDropdownOpen(false);
+                                            }}
+                                            className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-surface-hover"
+                                        >
+                                            <span className="material-symbols-outlined mr-2">logout</span>
+                                            Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <Button onClick={() => navigate('/login')}>Login</Button>
                         )}
@@ -95,8 +138,31 @@ export const MapComponent: React.FC<MapComponentProps> = ({ parkingLots, slots, 
         <div className="map-container">
             <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className="h-full w-full z-0">
                 <RecenterView center={center} zoom={zoom}/>
-                <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
+
+                <LayersControl position="topright">
+                    <LayersControl.BaseLayer checked name="Default">
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Satellite">
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.google.com/intl/en_us/help/terms_maps.html">Google Maps</a>'
+                            url="http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}"
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Terrain">
+                         <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                        />
+                    </LayersControl.BaseLayer>
+                </LayersControl>
+
                 <LocationMarker />
+
+                <LayerGroup>
                 {mapView === 'lots' && parkingLots.map(lot => (
                     <Marker
                         key={lot.lotId}
@@ -117,6 +183,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ parkingLots, slots, 
                         <Popup>{slot.bayNumber} - {slot.status}</Popup>
                     </Marker>
                 ))}
+                </LayerGroup>
             </MapContainer>
         </div>
     );

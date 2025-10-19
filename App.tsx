@@ -222,7 +222,9 @@ const AuthPage: React.FC = () => {
     );
 };
 
-const ProfilePage: React.FC = () => { return <div className="p-4">Profile Page</div>; };
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 // --- ROUTING ---
 interface ProtectedRouteProps { children: React.ReactNode; allowedRoles?: ('user' | 'admin')[]; }
@@ -250,6 +252,8 @@ const AppRoutes = () => (
                 <Route path="/login" element={<AuthPage />} />
                 <Route path="/" element={<HomePage />} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>

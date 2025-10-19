@@ -13,9 +13,13 @@ const Dock: React.FC = () => {
                 <span className="material-symbols-outlined">person</span>
                 <span className="dock-label">Profile</span>
             </NavLink>
-            <NavLink to="/admin" className="dock-item">
-                <span className="material-symbols-outlined">admin_panel_settings</span>
-                <span className="dock-label">Admin</span>
+            <NavLink to="/notifications" className="dock-item">
+                <span className="material-symbols-outlined">notifications</span>
+                <span className="dock-label">Notifications</span>
+            </NavLink>
+            <NavLink to="/settings" className="dock-item">
+                <span className="material-symbols-outlined">settings</span>
+                <span className="dock-label">Settings</span>
             </NavLink>
         </nav>
     );

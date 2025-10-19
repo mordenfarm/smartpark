@@ -36,7 +36,7 @@ export const useMockDatabase = () => {
     const [parkingLots, setParkingLots] = useState<ParkingLot[]>(initialParkingLots);
     const [slots, setSlots] = useState<Slot[]>(() => generateInitialSlots(initialParkingLots));
     const [reservations, setReservations] = useState<Reservation[]>([]);
-    const [users, setUsers] = useState<User[]>([]); // User state is now managed by Firebase
+    const [users, setUsers] = useState<User[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
 
@@ -75,6 +75,32 @@ export const useMockDatabase = () => {
     const getSlotsForLot = useCallback((lotId: string) => {
         return slots.filter(s => s.lotId === lotId);
     }, [slots]);
+
+    const updateUser = useCallback((userId: string, updates: Partial<User>) => {
+        setUsers(prev => prev.map(u => u.uid === userId ? { ...u, ...updates } : u));
+        // In a real app, you'd also update the user profile in Firebase Auth and Firestore
+        console.log(`User ${userId} updated with`, updates);
+        return Promise.resolve();
+    }, []);
+
+    const completeReservation = useCallback((reservationId: string) => {
+        let reservationToComplete: Reservation | undefined;
+        setReservations(prev => prev.map(r => {
+            if (r.resId === reservationId) {
+                reservationToComplete = { ...r, status: 'completed', endTime: Date.now() };
+                return reservationToComplete;
+            }
+            return r;
+        }));
+
+        if (reservationToComplete) {
+            const res = reservationToComplete;
+            setSlots(prev => prev.map(s => s.slotId === res.slotId ? { ...s, status: 'free' } : s));
+            setParkingLots(prev => prev.map(lot => lot.lotId === res.lotId ? { ...lot, availableSlots: Math.min(lot.totalSlots, lot.availableSlots + 1) } : lot));
+            console.log(`Reservation ${reservationId} marked as completed.`);
+        }
+        return Promise.resolve();
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -138,6 +164,9 @@ export const useMockDatabase = () => {
         getSlotsForLot,
         getReservationsForUser: (userId: string) => reservations.filter(r => r.userId === userId).sort((a, b) => b.createdAt - a.createdAt),
         getVehiclesForUser: (userId: string) => vehicles.filter(v => v.userId === userId),
+        updateUser,
+        completeReservation,
         adminStats,
+        getLotById: (lotId: string) => parkingLots.find(l => l.lotId === lotId),
     };
 };
