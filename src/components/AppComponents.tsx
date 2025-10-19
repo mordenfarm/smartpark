@@ -4,7 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { Card, Button, Modal, Input, Spinner } from './ui';
 import type { ParkingLot, Slot, User } from '../types';
 import L, { LatLngExpression } from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
@@ -52,14 +52,16 @@ export const Header: React.FC = () => {
                     <span className="material-symbols-outlined header-logo">local_parking</span>
                     <h1 className="header-title">SmartPark</h1>
                 </div>
-                <div className="header-links">
-                    {user && (
-                        <>
-                            <NavLink to="/" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
-                            <NavLink to="/profile" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
-                            {user.role === 'admin' && <NavLink to="/admin" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
-                        </>
-                    )}
+                <div className="header-actions">
+                    <div className="header-links">
+                        {user && (
+                            <>
+                                <NavLink to="/" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
+                                <NavLink to="/profile" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
+                                {user.role === 'admin' && <NavLink to="/admin" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
+                            </>
+                        )}
+                    </div>
                     <div className="flex items-center space-x-4">
                         {user ? (
                             <div className="relative">
@@ -96,15 +98,7 @@ const RecenterView: FC<{center: LatLngExpression, zoom: number}> = ({center, zoo
 
 const LocationMarker: FC = () => {
     const [position, setPosition] = useState<L.LatLng | null>(null);
-    const map = useMapEvents({
-        click() {
-            map.locate();
-        },
-        locationfound(e) {
-            setPosition(e.latlng);
-            map.flyTo(e.latlng, map.getZoom());
-        },
-    });
+    const map = useMap();
 
     return position === null ? null : (
         <Marker position={position}>
@@ -222,7 +216,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
         }
         setStep('PAYMENT');
     }
-    
+
     const handleConfirmPayment = async () => {
         if(!user) return;
         setStep('PROCESSING');
@@ -288,6 +282,67 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
     return <Modal isOpen={isOpen} onClose={onClose} title={`Reserve at ${lot.name}`}>{renderContent()}</Modal>;
 }
 
+// Profile Page
+export const ProfilePage: React.FC = () => {
+    const { user, db } = useAppContext();
+    const [reservations, setReservations] = useState<Reservation[]>([]);
+
+    useEffect(() => {
+        if (user) {
+            const userReservations = db.getReservationsForUser(user.uid);
+            setReservations(userReservations);
+        }
+    }, [user, db]);
+
+    if (!user) {
+        return <div className="p-4"><Spinner /></div>;
+    }
+
+    return (
+        <div className="p-4">
+            <h1 className="text-2xl font-bold mb-4">Profile</h1>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">User Details</h2>
+                <p><strong>Name:</strong> {user.displayName}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+            </Card>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">My Vehicles</h2>
+                {db.getVehiclesForUser(user.uid).map(v => (
+                    <div key={v.vehicleId} className="border-b py-2">
+                        <p><strong>Plate:</strong> {v.plateNumber}</p>
+                        <p><strong>Make:</strong> {v.make}</p>
+                        <p><strong>Color:</strong> {v.color}</p>
+                    </div>
+                ))}
+            </Card>
+            <Card>
+                <h2 className="text-xl font-bold mb-2">Reservation History</h2>
+                {reservations.length > 0 ? (
+                    <ul>
+                        {reservations.map(res => {
+                            const lot = db.parkingLots.find(l => l.lotId === res.lotId);
+                            const hoursStayed = res.endTime ? Math.floor((res.endTime - res.startTime) / (1000 * 60 * 60)) : 0;
+                            return (
+                                <li key={res.resId} className="border-b py-2">
+                                    <p><strong>Lot:</strong> {lot?.name}</p>
+                                    <p><strong>Vehicle:</strong> {res.vehicleId}</p>
+                                    <p><strong>Date:</strong> {new Date(res.startTime).toLocaleDateString()}</p>
+                                    <p><strong>Duration:</strong> {res.durationHours} hours</p>
+                                    <p><strong>Stayed:</strong> {hoursStayed} hours</p>
+                                    <p><strong>Status:</strong> {res.status}</p>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                ) : (
+                    <p>No reservation history.</p>
+                )}
+            </Card>
+        </div>
+    );
+};
+
 // Admin Dashboard
 export const AdminDashboard: React.FC = () => {
     const { db } = useAppContext();
@@ -332,7 +387,7 @@ export const AdminDashboard: React.FC = () => {
                             )
                         })}
                     </div>
-                </-card>
+                </Card>
             </div>
         </div>
     );
