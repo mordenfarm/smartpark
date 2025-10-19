@@ -16,6 +16,7 @@ const Dock: React.FC = () => {
             <NavLink to="/notifications" className={({ isActive }) => `dock-item ${isActive ? 'active' : ''}`}>
                 <span className="material-symbols-outlined">notifications</span>
                 <span className="dock-text">Notifications</span>
+                <span className="notification-badge">3</span>
             </NavLink>
             <NavLink to="/settings" className={({ isActive }) => `dock-item ${isActive ? 'active' : ''}`}>
                 <span className="material-symbols-outlined">settings</span>

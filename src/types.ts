@@ -1,55 +1,69 @@
-export interface User {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL: string | null;
-  role: 'user' | 'admin';
-}
-
-export interface ParkingLot {
-  lotId: string;
-  name: string;
-  coordinates: { lat: number; lng: number };
-  totalSlots: number;
-  availableSlots: number;
-  ratePerHour: number;
-}
-
 export interface Slot {
   slotId: string;
   lotId: string;
   bayNumber: string;
-  status: 'free' | 'occupied' | 'reserved';
   coordinates: { lat: number; lng: number };
+  status: 'free' | 'occupied';
+}
+
+export interface User {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  role: 'user' | 'admin';
+  photoURL?: string | null;
+  createdAt?: number; // timestamp
+  activeVehicleId?: string | null;
+  theme?: 'light' | 'dark';
+}
+
+export interface Vehicle {
+  vehicleId: string;
+  userId: string;
+  plateNumber: string;
+  make: string;
+  color: string;
+  token: string;
+  active: boolean;
+  createdAt: number; // timestamp
+}
+
+export interface ParkingLot {
+  lotId: string;
+  name:string;
+  city: string;
+  coordinates: { lat: number; lng: number };
+  totalSlots: number;
+  availableSlots: number;
+  ratePerHour: number;
+  status: 'active' | 'inactive';
+  createdAt: number; // timestamp
 }
 
 export interface Reservation {
   resId: string;
   userId: string;
-  vehicleId: string; // Plate number for now
+  vehicleId: string; // This will now be the plate number from the modal
   lotId: string;
   slotId: string;
-  startTime: number;
-  endTime: number;
+  startTime: number; // timestamp
+  endTime: number; // timestamp
   durationHours: number;
   amount: number;
-  currency: string;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  currency: 'ZWL' | 'USD';
+  status: 'pending' | 'active' | 'completed' | 'expired' | 'violated' | 'cancelled';
+  paymentId: string | null;
+  createdAt: number; // timestamp
 }
 
-export interface Vehicle {
-    vehicleId: string;
-    userId: string;
-    plateNumber: string;
-    make: string;
-    color: string;
-}
-
-export interface Notification {
-  id: string;
+export interface Payment {
+  payId: string;
+  resId: string;
   userId: string;
-  message: string;
-  timestamp: number;
-  read: boolean;
-  link?: string;
+  amount: number;
+  currency: 'ZWL';
+  status: 'initiated' | 'success' | 'failed' | 'pending';
+  provider: 'ZB_PAY_MOCK';
+  providerRef: string;
+  createdAt: number; // timestamp
 }

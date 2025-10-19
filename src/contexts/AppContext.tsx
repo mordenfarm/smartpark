@@ -1,9 +1,8 @@
-```typescript
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useMockDatabase, MockDatabase } from '../hooks/useMockDatabase';
+import { useMockDatabase, MockDatabase } from '@/hooks/useMockDatabase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth, getUserProfile, doSignOut } from '../services/auth';
-import type { User } from '../types';
+import { auth, getUserProfile, doSignOut } from '@/services/auth';
+import type { User } from '@/types';
 
 interface AppContextType {
   user: User | null;
@@ -66,4 +65,3 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
-```

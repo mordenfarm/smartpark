@@ -1,11 +1,11 @@
 import React, { useState, useEffect, FC } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../contexts/AppContext';
-import { Card, Button, Modal, Input, Spinner } from './ui';
-import type { ParkingLot, Slot, User } from '../types';
+import { useAppContext } from '@/contexts/AppContext';
+import { Card, Button, Modal, Input, Spinner } from './components/ui';
+import type { ParkingLot, Slot, User } from '@/types';
 import L, { LatLngExpression } from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
+import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '@/services/mapIcons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
 

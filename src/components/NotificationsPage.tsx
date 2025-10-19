@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from './ui';
+import { Card } from './components/ui';
 
 const NotificationsPage: React.FC = () => {
     // Mock data for now

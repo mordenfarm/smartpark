@@ -1,4 +1,3 @@
-```typescript
 import { useState, useEffect } from 'react';
 import { ParkingLot, Slot, Reservation, User } from '../types';
 
@@ -82,4 +81,3 @@ export const useMockDatabase = () => {
 };
 
 export type MockDatabase = ReturnType<typeof useMockDatabase>;
-```

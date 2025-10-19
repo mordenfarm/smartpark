@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useMockDatabase } from './hooks/useMockDatabase';
-import type { User, ParkingLot, Reservation, Slot } from './types';
-import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard, ProfilePage } from './components/AppComponents';
-import { Input, Button, Card } from './components/ui';
+import { useMockDatabase } from '@/hooks/useMockDatabase';
+import type { User, ParkingLot, Reservation, Slot } from '@/types';
+import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard } from '@/components/AppComponents';
+import { Input, Button, Card } from '@/components/components/ui';
 import { LatLngExpression } from 'leaflet';
-import { signInWithEmail, signUpWithEmail, signInWithGoogle } from './services/auth';
-import { AppProvider, useAppContext } from './contexts/AppContext';
-import NotificationsPage from './components/NotificationsPage';
-import SettingsPage from './components/SettingsPage';
-import Dock from './components/Dock';
-import './components/Dock.css';
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '@/services/auth';
+import { AppProvider, useAppContext } from '@/contexts/AppContext';
+import NotificationsPage from '@/components/NotificationsPage';
+import SettingsPage from '@/components/SettingsPage';
+import Dock from '@/components/Dock';
+import ReservationNotification from '@/components/ReservationNotification';
+import '@/components/Dock.css';
 
 // --- PAGES ---
 
@@ -19,6 +20,7 @@ const HomePage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [showNotification, setShowNotification] = useState(false);
     const [mapView, setMapView] = useState<'lots' | 'slots'>('lots');
     const [mapCenter, setMapCenter] = useState<LatLngExpression>([-20.0744, 30.8329]);
     const [mapZoom, setMapZoom] = useState(14);
@@ -101,6 +103,19 @@ const HomePage: React.FC = () => {
                 slot={selectedSlot}
                 lot={focusedLot}
             />
+            {showNotification && (
+                <ReservationNotification
+                    reservation={{
+                        lotName: 'Main Street Lot',
+                        lotNumber: 'A5',
+                        timeLeft: 3600,
+                    }}
+                    onMarkAsLeft={() => setShowNotification(false)}
+                />
+            )}
+            <Button onClick={() => setShowNotification(true)} className="absolute bottom-20 right-4 z-10">
+                Show Test Notification
+            </Button>
         </div>
     );
 };
@@ -174,6 +189,64 @@ const AuthPage: React.FC = () => {
     );
 };
 
+const ProfilePage: React.FC = () => {
+    const { user, db } = useAppContext();
+    const [reservations, setReservations] = useState<Reservation[]>([]);
+
+    useEffect(() => {
+        if (user) {
+            const userReservations = db.getReservationsForUser(user.uid);
+            setReservations(userReservations);
+        }
+    }, [user, db]);
+
+    if (!user) {
+        return <div className="p-4">Loading profile...</div>;
+    }
+
+    return (
+        <div className="p-4">
+            <h1 className="text-2xl font-bold mb-4">Profile</h1>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">User Details</h2>
+                <p><strong>Name:</strong> {user.displayName}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+            </Card>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">My Vehicles</h2>
+                {db.getVehiclesForUser(user.uid).map(v => (
+                    <div key={v.vehicleId} className="border-b py-2">
+                        <p><strong>Plate:</strong> {v.plateNumber}</p>
+                        <p><strong>Make:</strong> {v.make}</p>
+                        <p><strong>Color:</strong> {v.color}</p>
+                    </div>
+                ))}
+            </Card>
+            <Card>
+                <h2 className="text-xl font-bold mb-2">Reservation History</h2>
+                {reservations.length > 0 ? (
+                    <ul>
+                        {reservations.map(res => {
+                            const lot = db.parkingLots.find(l => l.lotId === res.lotId);
+                            return (
+                                <li key={res.resId} className="border-b py-2">
+                                    <p><strong>Lot:</strong> {lot?.name}</p>
+                                    <p><strong>Vehicle:</strong> {res.vehicleId}</p>
+                                    <p><strong>Date:</strong> {new Date(res.startTime).toLocaleDateString()}</p>
+                                    <p><strong>Duration:</strong> {res.durationHours} hours</p>
+                                    <p><strong>Stayed:</strong> {Math.floor((res.endTime - res.startTime) / (1000 * 60 * 60))} hours</p>
+                                    <p><strong>Status:</strong> {res.status}</p>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                ) : (
+                    <p>No reservation history.</p>
+                )}
+            </Card>
+        </div>
+    );
+};
 
 
 // --- ROUTING ---

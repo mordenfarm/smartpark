@@ -10,8 +10,8 @@ import {
   User as FirebaseUser
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { app, db } from "./firebase-config"; // Assuming you have this file
-import type { User } from '../types';
+import { app, db } from "@/services/firebase-config";
+import type { User } from '@/types';
 
 export const auth = getAuth(app);
 

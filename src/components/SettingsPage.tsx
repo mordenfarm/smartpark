@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, Button, Input } from './ui';
-import { useAppContext } from '../contexts/AppContext';
+import { Card, Button, Input } from './components/ui';
+import { useAppContext } from '@/contexts/AppContext';
 
 const SettingsPage: React.FC = () => {
     const { logout } = useAppContext();
