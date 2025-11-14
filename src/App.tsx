@@ -1,72 +1,30 @@
-import React, { useState, useEffect, createContext, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useMockDatabase } from './hooks/useMockDatabase';
-import type { User, ParkingLot, Reservation, Slot } from './types';
-import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard } from './components/AppComponents';
-import { Input, Button, Card } from './components/ui';
+import { useMockDatabase } from '@/hooks/useMockDatabase';
+import type { User, ParkingLot, Reservation, Slot } from '@/types';
+import { Header, MapComponent, ParkingLotDetail, ReservationModal, AdminDashboard } from '@/components/AppComponents';
+import { Input, Button, Card } from '@/components/components/ui';
 import { LatLngExpression } from 'leaflet';
-import { onAuthChanged, getUserProfile, signInWithEmail, signUpWithEmail, doSignOut, signInWithGoogle } from './services/auth';
-import { User as FirebaseUser } from 'firebase/auth';
-
-// --- CONTEXTS ---
-type AppContextType = {
-    user: User | null;
-    firebaseUser: FirebaseUser | null;
-    loading: boolean;
-    logout: () => void;
-    db: ReturnType<typeof useMockDatabase>;
-};
-const AppContext = createContext<AppContextType | undefined>(undefined);
-export const useAppContext = () => {
-    const context = useContext(AppContext);
-    if (!context) throw new Error("useAppContext must be used within an AppProvider");
-    return context;
-};
-
-const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const db = useMockDatabase();
-    const [user, setUser] = useState<User | null>(null);
-    const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const unsubscribe = onAuthChanged(async (user) => {
-            setFirebaseUser(user);
-            if (user) {
-                const userProfile = await getUserProfile(user.uid);
-                setUser(userProfile);
-            } else {
-                setUser(null);
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const logout = async () => {
-        await doSignOut();
-        setUser(null);
-        setFirebaseUser(null);
-    };
-    
-    const value = { user, firebaseUser, loading, logout, db };
-
-    if (loading) {
-        return <div>Loading...</div>; // Or a proper spinner component
-    }
-
-    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '@/services/auth';
+import { AppProvider, useAppContext } from '@/contexts/AppContext';
+import NotificationsPage from '@/components/NotificationsPage';
+import SettingsPage from '@/components/SettingsPage';
+import Dock from '@/components/Dock';
+import ReservationNotification from '@/components/ReservationNotification';
+import '@/components/Dock.css';
 
 // --- PAGES ---
 
 const HomePage: React.FC = () => {
-    const { db } = useAppContext();
-    
+    const { db, user } = useAppContext();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const [showNotification, setShowNotification] = useState(false);
     const [mapView, setMapView] = useState<'lots' | 'slots'>('lots');
     const [mapCenter, setMapCenter] = useState<LatLngExpression>([-20.0744, 30.8329]);
     const [mapZoom, setMapZoom] = useState(14);
-    
+
     const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
     const [focusedLot, setFocusedLot] = useState<ParkingLot | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -90,10 +48,6 @@ const HomePage: React.FC = () => {
         setMapCenter([lot.coordinates.lat, lot.coordinates.lng]);
     };
 
-    const { user } = useAppContext();
-    const navigate = useNavigate();
-    const location = useLocation();
-
     const handleSelectSlot = (slot: Slot) => {
         if (!user) {
             // If user is not logged in, redirect to login page
@@ -109,7 +63,7 @@ const HomePage: React.FC = () => {
             alert("This bay is currently occupied.");
         }
     };
-    
+
     const handleCloseModal = () => {
         setReserveModalOpen(false);
         setSelectedSlot(null);
@@ -125,7 +79,7 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="home-page">
-            <MapComponent 
+            <MapComponent
                 parkingLots={db.parkingLots}
                 slots={slotsForFocusedLot}
                 mapView={mapView}
@@ -143,12 +97,25 @@ const HomePage: React.FC = () => {
                 </div>
             )}
             <ParkingLotDetail lot={selectedLot} onClose={() => setSelectedLot(null)} onViewBays={handleViewBays} />
-            <ReservationModal 
-                isOpen={isReserveModalOpen} 
-                onClose={handleCloseModal} 
+            <ReservationModal
+                isOpen={isReserveModalOpen}
+                onClose={handleCloseModal}
                 slot={selectedSlot}
                 lot={focusedLot}
             />
+            {showNotification && (
+                <ReservationNotification
+                    reservation={{
+                        lotName: 'Main Street Lot',
+                        lotNumber: 'A5',
+                        timeLeft: 3600,
+                    }}
+                    onMarkAsLeft={() => setShowNotification(false)}
+                />
+            )}
+            <Button onClick={() => setShowNotification(true)} className="absolute bottom-20 right-4 z-10">
+                Show Test Notification
+            </Button>
         </div>
     );
 };
@@ -197,7 +164,7 @@ const AuthPage: React.FC = () => {
             alert(`Google Sign-In Failed: ${err.message}`);
         }
     };
-    
+
     return (
         <div className="auth-page">
             <Card className="w-full max-w-md auth-card">
@@ -222,7 +189,65 @@ const AuthPage: React.FC = () => {
     );
 };
 
-const ProfilePage: React.FC = () => { return <div className="p-4">Profile Page</div>; };
+const ProfilePage: React.FC = () => {
+    const { user, db } = useAppContext();
+    const [reservations, setReservations] = useState<Reservation[]>([]);
+
+    useEffect(() => {
+        if (user) {
+            const userReservations = db.getReservationsForUser(user.uid);
+            setReservations(userReservations);
+        }
+    }, [user, db]);
+
+    if (!user) {
+        return <div className="p-4">Loading profile...</div>;
+    }
+
+    return (
+        <div className="p-4">
+            <h1 className="text-2xl font-bold mb-4">Profile</h1>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">User Details</h2>
+                <p><strong>Name:</strong> {user.displayName}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+            </Card>
+            <Card className="mb-4">
+                <h2 className="text-xl font-bold mb-2">My Vehicles</h2>
+                {db.getVehiclesForUser(user.uid).map(v => (
+                    <div key={v.vehicleId} className="border-b py-2">
+                        <p><strong>Plate:</strong> {v.plateNumber}</p>
+                        <p><strong>Make:</strong> {v.make}</p>
+                        <p><strong>Color:</strong> {v.color}</p>
+                    </div>
+                ))}
+            </Card>
+            <Card>
+                <h2 className="text-xl font-bold mb-2">Reservation History</h2>
+                {reservations.length > 0 ? (
+                    <ul>
+                        {reservations.map(res => {
+                            const lot = db.parkingLots.find(l => l.lotId === res.lotId);
+                            return (
+                                <li key={res.resId} className="border-b py-2">
+                                    <p><strong>Lot:</strong> {lot?.name}</p>
+                                    <p><strong>Vehicle:</strong> {res.vehicleId}</p>
+                                    <p><strong>Date:</strong> {new Date(res.startTime).toLocaleDateString()}</p>
+                                    <p><strong>Duration:</strong> {res.durationHours} hours</p>
+                                    <p><strong>Stayed:</strong> {Math.floor((res.endTime - res.startTime) / (1000 * 60 * 60))} hours</p>
+                                    <p><strong>Status:</strong> {res.status}</p>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                ) : (
+                    <p>No reservation history.</p>
+                )}
+            </Card>
+        </div>
+    );
+};
+
 
 // --- ROUTING ---
 interface ProtectedRouteProps { children: React.ReactNode; allowedRoles?: ('user' | 'admin')[]; }
@@ -239,24 +264,26 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <>{children}</>;
 };
 
-import Dock from './components/Dock';
-import './components/Dock.css';
-
-const AppRoutes = () => (
-    <div className="app-container">
-        <Header />
-        <main className="app-content">
-            <Routes>
-                <Route path="/login" element={<AuthPage />} />
-                <Route path="/" element={<HomePage />} />
-                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-                <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-        </main>
-        <Dock />
-    </div>
-);
+const AppRoutes = () => {
+    const { user } = useAppContext();
+    return (
+        <div className="app-container">
+            <Header />
+            <main className="app-content">
+                <Routes>
+                    <Route path="/login" element={<AuthPage />} />
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                    <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+            </main>
+            {user && <Dock />}
+        </div>
+    );
+};
 
 // --- MAIN APP ---
 const App: React.FC = () => (

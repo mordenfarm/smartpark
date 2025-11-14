@@ -89,3 +89,6 @@ export const Spinner: React.FC = () => {
         <div className="spinner-animation"></div>
     );
 };
+
+// ProgressBar
+export { default as ProgressBar } from './ui/ProgressBar';

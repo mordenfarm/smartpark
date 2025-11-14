@@ -127,6 +127,10 @@ export const useMockDatabase = () => {
         };
     }, [payments, reservations, users, parkingLots]);
 
+    const clearUsers = () => {
+        setUsers([]);
+    };
+
     return {
         parkingLots,
         reservations,

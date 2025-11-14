@@ -1,10 +1,10 @@
 import React, { useState, useEffect, FC } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../App';
+import { useAppContext } from '../contexts/AppContext';
 import { Card, Button, Modal, Input, Spinner } from './ui';
-import type { ParkingLot, Slot } from '../types';
+import type { ParkingLot, Slot, User } from '../types';
 import L, { LatLngExpression } from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { greenIcon, redIcon, greenSlotIcon, redSlotIcon } from '../services/mapIcons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './AppComponents.css';
@@ -37,6 +37,13 @@ const Avatar: React.FC<{ user: { displayName: string | null, email: string | nul
 export const Header: React.FC = () => {
     const { user, logout } = useAppContext();
     const navigate = useNavigate();
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        setDropdownOpen(false);
+        navigate('/login');
+    };
 
     return (
         <header className="header">
@@ -46,19 +53,28 @@ export const Header: React.FC = () => {
                     <h1 className="header-title">SmartPark</h1>
                 </div>
                 <div className="header-links">
-                     {user && (
+                    {user && (
                         <>
-                            <NavLink to="/" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
-                            <NavLink to="/profile" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
-                            {user.role === 'admin' && <NavLink to="/admin" className={({isActive}) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
+                            <NavLink to="/" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Map</NavLink>
+                            <NavLink to="/profile" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Profile</NavLink>
+                            {user.role === 'admin' && <NavLink to="/admin" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>Admin</NavLink>}
                         </>
                     )}
                     <div className="flex items-center space-x-4">
                         {user ? (
-                            <>
-                                <Avatar user={user} />
-                                <Button onClick={logout} variant="secondary">Logout</Button>
-                            </>
+                            <div className="relative">
+                                <button onClick={() => setDropdownOpen(!dropdownOpen)} className="focus:outline-none">
+                                    <Avatar user={user} />
+                                </button>
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-20">
+                                        <div className="py-1">
+                                            <NavLink to="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setDropdownOpen(false)}>Settings</NavLink>
+                                            <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <Button onClick={() => navigate('/login')}>Login</Button>
                         )}
@@ -78,7 +94,24 @@ const RecenterView: FC<{center: LatLngExpression, zoom: number}> = ({center, zoo
      return null;
 }
 
-const LocationMarker: FC = () => { /* ... unchanged ... */ return null}
+const LocationMarker: FC = () => {
+    const [position, setPosition] = useState<L.LatLng | null>(null);
+    const map = useMapEvents({
+        click() {
+            map.locate();
+        },
+        locationfound(e) {
+            setPosition(e.latlng);
+            map.flyTo(e.latlng, map.getZoom());
+        },
+    });
+
+    return position === null ? null : (
+        <Marker position={position}>
+            <Popup>You are here</Popup>
+        </Marker>
+    );
+}
 
 // Map Component
 interface MapComponentProps {
@@ -140,7 +173,7 @@ export const ParkingLotDetail: React.FC<ParkingLotDetailProps> = ({ lot, onClose
                     <p><span className="material-symbols-outlined">attach_money</span>${lot.ratePerHour.toFixed(2)} / hour</p>
                     <p><span className="material-symbols-outlined">event_seat</span>
                         <span className={lot.availableSlots > 0 ? 'text-green-500' : 'text-red-500'}>
-                            {lot.availableSlots} / {lot.totalSlots} slots available
+                            {lot.availableSlots} / {lot.totalSlots} available
                         </span>
                     </p>
                 </div>
@@ -160,7 +193,8 @@ interface ReservationModalProps {
     lot: ParkingLot | null;
 }
 export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onClose, slot, lot }) => {
-    const { user, login, db } = useAppContext();
+    const { user, db } = useAppContext();
+    const navigate = useNavigate();
     const [step, setStep] = useState<ReservationStep>('PLATE_INPUT');
     const [duration, setDuration] = useState(1);
     const [plateNumber, setPlateNumber] = useState('');
@@ -215,7 +249,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
                 return (
                     <div className="text-center">
                         <p className="mb-4">Please log in or sign up to continue.</p>
-                        <Button onClick={() => login('john@example.com', 'password')}>Login (Mock)</Button>
+                        <Button onClick={() => navigate('/login')}>Login</Button>
                     </div>
                 );
             case 'PLATE_INPUT':
@@ -298,7 +332,7 @@ export const AdminDashboard: React.FC = () => {
                             )
                         })}
                     </div>
-                </Card>
+                </-card>
             </div>
         </div>
     );
